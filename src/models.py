@@ -1,58 +1,58 @@
-from sqlalchemy import Column, Integer, String, Boolean, Date, ForeignKey
-from sqlalchemy.orm import declarative_base, relationship, sessionmaker
-from typing import List
+import datetime
+import decimal
+
+from typing import Optional, List
+
+from sqlalchemy import Integer, String, Boolean, Date, DECIMAL, ForeignKey, UniqueConstraint
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
-Base = declarative_base()
-
-
-class Set(Base):
-    __tablename__ = "sets"
-
-    set_id = Column(Integer, primary_key=True)
-    reps = Column(Integer, nullable=False)
-    weight = Column(Integer, nullable=True)
-    exercise_name = Column(String(50), ForeignKey("exercises.name"), nullable=False)
-    workout_id = Column(Integer, ForeignKey("workouts.id"), nullable=False, unique=True)
-    workout = relationship("Workout", back_populates="sets")
-
-    def __init__(self, reps, exercise_name, weight=None):
-        self.reps = reps
-        self.exercise_name = exercise_name
-        if weight:
-            self.weight = weight
+class Base(DeclarativeBase):
+    pass
 
 
 class Exercise(Base):
-    __tablename__ = "exercises"
+    __tablename__ = "exercise"
 
-    name = Column(String(50), primary_key=True)
-    body_weight = Column(Boolean, nullable=False)
+    name: Mapped[str] = mapped_column(String(50), primary_key=True)
+    body_weight: Mapped[bool] = mapped_column(Boolean)
 
-    def __init__(self, name, body_weight):
-        self.name = name
-        self.body_weight = body_weight
+
+class Set(Base):
+    __tablename__ = "set"
+
+    set_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    reps: Mapped[int] = mapped_column(Integer)
+    weight: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    exercise_name: Mapped[str] = mapped_column(ForeignKey("exercise.name"))
+    workout_id: Mapped[int] = mapped_column(ForeignKey("workout.workout_id"))
 
 
 class Workout(Base):
-    __tablename__ = "workouts"
+    __tablename__ = "workout"
 
-    id = Column(Integer, primary_key=True)
-    date = Column(Date, nullable=False)
-    sets = relationship("Set", back_populates="workouts")
-
-    def __init__(self, workout_date):
-        self.date = workout_date
+    workout_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("user.name"))
+    date: Mapped[datetime.date] = mapped_column(Date)
+    sets: Mapped[List["Set"]] = relationship()
 
 
 class User(Base):
-    __tablename__ = "users"
+    __tablename__ = "user"
 
-    name: str = Column(String(30), primary_key=True)
-    workouts = relationship("Workout", back_populates="user")
-
-    def __init__(self, name):
-        self.name = name
+    name: Mapped[str] = mapped_column(String(30), primary_key=True)
+    workouts: Mapped[List["Workout"]] = relationship()
 
     def __repr__(self):
         return self.name
+
+
+class UserWeight(Base):
+    __tablename__ = "user_weight"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_name: Mapped[str] = mapped_column(ForeignKey("user.name"))
+    weight: Mapped[decimal] = mapped_column(DECIMAL)
+    date: Mapped[datetime.date] = mapped_column(nullable=False)
+
+    __table_args__ = (UniqueConstraint("user_name", "date", name="user_date_constraint"),)
