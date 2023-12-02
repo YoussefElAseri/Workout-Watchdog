@@ -4,7 +4,7 @@ import decimal
 from typing import Optional, List
 
 from sqlalchemy import Integer, String, Boolean, Date, DECIMAL, ForeignKey, UniqueConstraint
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship, validates
 
 
 class Base(DeclarativeBase):
@@ -17,6 +17,12 @@ class Exercise(Base):
     name: Mapped[str] = mapped_column(String(50), primary_key=True)
     body_weight: Mapped[bool] = mapped_column(Boolean)
 
+    @validates("name")
+    def validates_name(self, key, name):
+        if len(name) > 50:
+            raise Exception("Exercise name should be 50 characters or less!")
+        return name
+
 
 class Set(Base):
     __tablename__ = "set"
@@ -26,6 +32,18 @@ class Set(Base):
     weight: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     exercise_name: Mapped[str] = mapped_column(ForeignKey("exercise.name"))
     workout_id: Mapped[int] = mapped_column(ForeignKey("workout.workout_id"))
+
+    @validates("reps")
+    def validate_reps(self, key, reps):
+        if reps <= 0:
+            raise Exception("Number of reps should be at least one!")
+        return reps
+
+    @validates("weight")
+    def validate_reps(self, key, weight):
+        if weight <= 0:
+            raise Exception("Weight should be higher than zero!")
+        return weight
 
 
 class Workout(Base):
@@ -40,8 +58,14 @@ class Workout(Base):
 class User(Base):
     __tablename__ = "user"
 
-    name: Mapped[str] = mapped_column(String(30), primary_key=True)
+    name = mapped_column(String(30), primary_key=True)
     workouts: Mapped[List["Workout"]] = relationship()
+
+    @validates("name")
+    def validate_name(self, key, name):
+        if len(name) > 30:
+            raise Exception("User name should be 30 characters or less!")
+        return name
 
     def __repr__(self):
         return self.name
@@ -56,3 +80,9 @@ class UserWeight(Base):
     date: Mapped[datetime.date] = mapped_column(nullable=False)
 
     __table_args__ = (UniqueConstraint("user_name", "date", name="user_date_constraint"),)
+
+    @validates("weight")
+    def validate_reps(self, key, weight):
+        if weight <= 30:
+            raise Exception("Weight should be higher than 30!")
+        return weight
