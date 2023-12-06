@@ -3,7 +3,7 @@ from contextlib import contextmanager
 
 import click
 from sqlalchemy.exc import IntegrityError
-from models import User, Set, Workout, Exercise
+from models import User, Set, Workout, Exercise, UserWeight
 from database import Session
 
 
@@ -117,16 +117,8 @@ class App:
     def add_workout(self):
         workout_date: date
         sets: [Set] = []
-        click.echo("When did you workout?")
-        click.echo("0) Today")
-        click.echo("1) Custom date")
 
-        choice = get_binary_user_input()
-        if choice == TODAY:
-            workout_date = date.today()
-        elif choice == CUSTOM_DATE:
-            workout_date = self.ask_date()
-
+        workout_date = self.ask_date("When did you work out?")
         with get_session() as session:
             workout = Workout(user_id=self.current_username, date=workout_date, sets=[])
             session.add(workout)
@@ -142,14 +134,22 @@ class App:
             current_user.workouts.append(workout)
             session.commit()
 
-    def ask_date(self) -> date:
+    def ask_date(self, prompt) -> date:
+        click.echo(prompt)
+        click.echo("0) Today")
+        click.echo("1) Custom date")
+
+        choice = get_binary_user_input()
+        if choice == TODAY:
+            return date.today()
+
         new_date: date
         while True:
             date_str = click.prompt("Enter the date (DD-MM-YYYY)", type=str)
             try:
                 new_date = datetime.strptime(date_str, "%d-%m-%Y").date()
                 return new_date
-            except:
+            except ValueError:
                 print("Invalid date format. Please enter the date in the format DD-MM-YYYY.")
 
     def add_set(self, workout_id1):
@@ -184,10 +184,24 @@ class App:
             return new_set.set_id
 
     def add_exercise(self):
-        pass
+        exercise_name = click.prompt("Enter exercise name", type="str")
+        bodyweight = click.confirm("Is it a bodyweight exercise?")
+        with get_session() as session:
+            exercise = Exercise(name=exercise_name, body_weight=bodyweight)
+            session.add(exercise)
+            session.commit()
 
     def add_weight(self):
-        pass
+        weigh_date = self.ask_date("When did you weigh yourself?")
+        while True:
+            weight = click.prompt("How much did you weigh", type=int)
+            if weight > 30:
+                break
+            click.echo("Weight should be higher than 30!")
+
+        with get_session() as session:
+            session.add(UserWeight(user_name=self.current_username, weight=weight, date=weigh_date))
+            session.commit()
 
     def print_workout_history(self):
         pass

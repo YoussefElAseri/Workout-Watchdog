@@ -49,7 +49,7 @@ class Set(Base):
         return reps
 
     @validates("weight")
-    def validate_reps(self, key, weight):
+    def validate_weight(self, key, weight):
         if weight <= 0:
             raise Exception("Weight should be higher than zero!")
         return weight
@@ -82,7 +82,7 @@ class UserWeight(Base):
     __table_args__ = (UniqueConstraint("user_name", "date", name="user_date_constraint"),)
 
     @validates("weight")
-    def validate_reps(self, key, weight):
+    def validate_weight(self, key, weight):
         if weight <= 30:
             raise Exception("Weight should be higher than 30!")
         return weight
