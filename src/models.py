@@ -15,13 +15,22 @@ class Exercise(Base):
     __tablename__ = "exercise"
 
     name: Mapped[str] = mapped_column(String(50), primary_key=True)
-    body_weight: Mapped[bool] = mapped_column(Boolean)
+    body_weight: Mapped[bool] = mapped_column(Boolean, default=False)
 
     @validates("name")
     def validates_name(self, key, name):
         if len(name) > 50:
             raise Exception("Exercise name should be 50 characters or less!")
         return name
+
+
+class Workout(Base):
+    __tablename__ = "workout"
+
+    workout_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("user.name"))
+    date: Mapped[datetime.date] = mapped_column(Date)
+    sets: Mapped[List["Set"]] = relationship("Set")
 
 
 class Set(Base):
@@ -31,7 +40,7 @@ class Set(Base):
     reps: Mapped[int] = mapped_column(Integer)
     weight: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     exercise_name: Mapped[str] = mapped_column(ForeignKey("exercise.name"))
-    workout_id: Mapped[int] = mapped_column(ForeignKey("workout.workout_id"))
+    workout_id: Mapped[str] = mapped_column(ForeignKey("workout.workout_id"))
 
     @validates("reps")
     def validate_reps(self, key, reps):
@@ -44,15 +53,6 @@ class Set(Base):
         if weight <= 0:
             raise Exception("Weight should be higher than zero!")
         return weight
-
-
-class Workout(Base):
-    __tablename__ = "workout"
-
-    workout_id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    user_id: Mapped[str] = mapped_column(ForeignKey("user.name"))
-    date: Mapped[datetime.date] = mapped_column(Date)
-    sets: Mapped[List["Set"]] = relationship()
 
 
 class User(Base):

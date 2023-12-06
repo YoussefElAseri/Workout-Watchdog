@@ -1,9 +1,19 @@
+from datetime import date, datetime
 from contextlib import contextmanager
 
 import click
 from sqlalchemy.exc import IntegrityError
 from models import User, Set, Workout, Exercise
 from database import Session
+
+
+ADD_WORKOUT = 0
+ADD_EXERCISE = 1
+ADD_WEIGHT = 2
+LOG_WORKOUT = 3
+LOG_WEIGHT = 4
+TODAY = 0
+CUSTOM_DATE = 1
 
 
 @contextmanager
@@ -19,9 +29,18 @@ def get_session():
         session.close()
 
 
+def get_binary_user_input():
+    while True:
+        choice = click.prompt("Choose your option", type=int)
+        if choice in [0, 1]:
+            return choice
+        else:
+            click.echo("Invalid choice. Please choose either 0 or 1!")
+
+
 class App:
     def __init__(self):
-        self.current_user = None
+        self.current_username = None
 
     def start(self):
         with Session() as session:
@@ -31,16 +50,11 @@ class App:
             self.create_user()
         else:
             click.echo("0) Create User\n1) Login")
-            while True:
-                choice = click.prompt("Choose your option", type=int)
-                if choice == 0:
-                    self.create_user()
-                    break
-                elif choice == 1:
-                    self.login()
-                    break
-                else:
-                    click.echo("Choose either 0 or 1!")
+            choice = get_binary_user_input()
+            if choice == 0:
+                self.create_user()
+            elif choice == 1:
+                self.login()
 
     def create_user(self):
         while True:
@@ -51,7 +65,7 @@ class App:
                     session.add(new_user)
                     session.commit()
                     click.echo("Successfully created account!")
-                    self.current_user = new_user
+                    self.current_username = name
                     self.menu()
                     break
                 except IntegrityError as e:
@@ -71,37 +85,103 @@ class App:
             choice = click.prompt("Choose your option", type=int)
             if 0 <= choice < len(users):
                 break
-        self.current_user = users[choice]
+        self.current_username = user_names[choice]
         self.menu()
 
     def menu(self):
-        click.echo("0) Enter new workout")
-        click.echo("1) Enter new exercise")
-        click.echo("2) Enter weight")
+        # TODO: add delete functionality
+        click.echo("0) Add new workout")
+        click.echo("1) Add new exercise")
+        click.echo("2) Add weight")
         click.echo("3) See workout history")
         click.echo("4) See weight history")
         while True:
             choice = click.prompt("Choose your option", type=int)
             if 0 <= choice <= 4:
                 break
-        if choice == 0:
+            else:
+                click.echo("Choice should be a number from 0 to 4!")
+        if choice == ADD_WORKOUT:
             self.add_workout()
-        elif choice == 1:
+        elif choice == ADD_EXERCISE:
             self.add_exercise()
-        elif choice == 2:
+        elif choice == ADD_WEIGHT:
             self.add_weight()
-        elif choice == 3:
+        elif choice == LOG_WORKOUT:
             self.print_workout_history()
-        elif choice == 4:
+        elif choice == LOG_WEIGHT:
             self.print_weight_history()
         else:
             raise Exception(f"Menu choice should be a number from 0 to 4 but is {choice}")
 
     def add_workout(self):
-        pass
+        workout_date: date
+        sets: [Set] = []
+        click.echo("When did you workout?")
+        click.echo("0) Today")
+        click.echo("1) Custom date")
 
-    def add_set(self):
-        pass
+        choice = get_binary_user_input()
+        if choice == TODAY:
+            workout_date = date.today()
+        elif choice == CUSTOM_DATE:
+            workout_date = self.ask_date()
+
+        with get_session() as session:
+            workout = Workout(user_id=self.current_username, date=workout_date, sets=[])
+            session.add(workout)
+            session.commit()
+            add_set = True
+            while add_set:
+                set_id = self.add_set(workout.workout_id)
+                new_set = session.query(Set).filter(Set.set_id == set_id).first()
+                sets.append(new_set)
+                add_set = click.confirm("Add set?")
+            workout.sets = sets
+            current_user = session.query(User).filter(User.name == self.current_username).first()
+            current_user.workouts.append(workout)
+            session.commit()
+
+    def ask_date(self) -> date:
+        new_date: date
+        while True:
+            date_str = click.prompt("Enter the date (DD-MM-YYYY)", type=str)
+            try:
+                new_date = datetime.strptime(date_str, "%d-%m-%Y").date()
+                return new_date
+            except:
+                print("Invalid date format. Please enter the date in the format DD-MM-YYYY.")
+
+    def add_set(self, workout_id1):
+        with get_session() as session:
+            exercises = session.query(Exercise).all()
+            for i in range(len(exercises)):
+                click.echo(f"{i}) {exercises[i].name}")
+
+            while True:
+                choice = click.prompt("Choose your option", type=int)
+                if 0 <= choice < len(exercises):
+                    break
+
+            while True:
+                reps = click.prompt("How many repetitions", type=int)
+                if reps > 0:
+                    break
+                click.echo("Repetitions should be higher than 0!")
+
+            new_set = Set(reps=reps, exercise_name=exercises[choice].name, workout_id=workout_id1)
+
+            if not exercises[choice].body_weight:
+                while True:
+                    weight = click.prompt("How much weight", type=int)
+                    if weight > 0:
+                        break
+                    click.echo("Weight should be higher than 0!")
+                new_set.weight = weight
+
+            session.add(new_set)
+            session.commit()
+            return new_set.set_id
 
     def add_exercise(self):
         pass
