@@ -12,6 +12,7 @@ ADD_EXERCISE = 1
 ADD_WEIGHT = 2
 LOG_WORKOUT = 3
 LOG_WEIGHT = 4
+QUIT = 5
 TODAY = 0
 CUSTOM_DATE = 1
 
@@ -90,29 +91,32 @@ class App:
 
     def menu(self):
         # TODO: add delete functionality
-        click.echo("0) Add new workout")
-        click.echo("1) Add new exercise")
-        click.echo("2) Add weight")
-        click.echo("3) See workout history")
-        click.echo("4) See weight history")
         while True:
-            choice = click.prompt("Choose your option", type=int)
-            if 0 <= choice <= 4:
+            click.echo("0) Add new workout")
+            click.echo("1) Add new exercise")
+            click.echo("2) Add weight")
+            click.echo("3) See workout history")
+            click.echo("4) See weight history")
+            while True:
+                choice = click.prompt("Choose your option", type=int)
+                if 0 <= choice <= 5:
+                    break
+                else:
+                    click.echo("Choice should be a number from 0 to 4!")
+            if choice == ADD_WORKOUT:
+                self.add_workout()
+            elif choice == ADD_EXERCISE:
+                self.add_exercise()
+            elif choice == ADD_WEIGHT:
+                self.add_weight()
+            elif choice == LOG_WORKOUT:
+                self.print_workout_history()
+            elif choice == LOG_WEIGHT:
+                self.print_weight_history()
+            elif choice == QUIT:
                 break
             else:
-                click.echo("Choice should be a number from 0 to 4!")
-        if choice == ADD_WORKOUT:
-            self.add_workout()
-        elif choice == ADD_EXERCISE:
-            self.add_exercise()
-        elif choice == ADD_WEIGHT:
-            self.add_weight()
-        elif choice == LOG_WORKOUT:
-            self.print_workout_history()
-        elif choice == LOG_WEIGHT:
-            self.print_weight_history()
-        else:
-            raise Exception(f"Menu choice should be a number from 0 to 4 but is {choice}")
+                raise Exception(f"Menu choice should be a number from 0 to 4 but is {choice}")
 
     def add_workout(self):
         workout_date: date
@@ -191,10 +195,11 @@ class App:
             session.add(exercise)
             session.commit()
 
+    # TODO: check user_date_constraint
     def add_weight(self):
         weigh_date = self.ask_date("When did you weigh yourself?")
         while True:
-            weight = click.prompt("How much did you weigh", type=int)
+            weight = click.prompt("How much did you weigh", type=float)
             if weight > 30:
                 break
             click.echo("Weight should be higher than 30!")
@@ -203,11 +208,26 @@ class App:
             session.add(UserWeight(user_name=self.current_username, weight=weight, date=weigh_date))
             session.commit()
 
+    # TODO: add filters
     def print_workout_history(self):
-        pass
+        click.echo("Workout History:")
+        click.echo("Exercise repetitions weight")
+        with get_session() as session:
+            workouts = session.query(Workout).filter(Workout.user_id == self.current_username).all()
+            for workout in workouts:
+                self.print_workout(workout)
+
+    def print_workout(self, workout):
+        click.echo(f"\ndate: {workout.date}")
+        for workout_set in workout.sets:
+            click.echo(f"{workout_set}")
 
     def print_weight_history(self):
-        pass
+        click.echo("Weight History:")
+        with get_session() as session:
+            weight_history = session.query(UserWeight).filter(UserWeight.user_name == self.current_username).all()
+            for weight_entry in weight_history:
+                click.echo(f"{weight_entry}")
 
 
 @click.command()

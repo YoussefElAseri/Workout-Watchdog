@@ -54,6 +54,11 @@ class Set(Base):
             raise Exception("Weight should be higher than zero!")
         return weight
 
+    def __repr__(self):
+        if self.weight:
+            return f"{self.exercise_name}       {self.reps}       {self.weight}kg"
+        return f"{self.exercise_name}       {self.reps}"
+
 
 class User(Base):
     __tablename__ = "user"
@@ -86,3 +91,6 @@ class UserWeight(Base):
         if weight <= 30:
             raise Exception("Weight should be higher than 30!")
         return weight
+
+    def __repr__(self):
+        return f"{self.date} {self.weight:.2f}kg"
