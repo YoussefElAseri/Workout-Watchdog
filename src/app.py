@@ -6,7 +6,6 @@ from sqlalchemy.exc import IntegrityError
 from models import User, Set, Workout, Exercise, UserWeight
 from database import Session
 
-
 ADD_WORKOUT = 0
 ADD_EXERCISE = 1
 ADD_WEIGHT = 2
@@ -205,6 +204,11 @@ class App:
             click.echo("Weight should be higher than 30!")
 
         with get_session() as session:
+            if len(session.query(UserWeight).filter(UserWeight.user_name == self.current_username
+                                                    and UserWeight.date == weigh_date).all()) > 0:
+                print("You have already entered your weight for this day!")
+                return
+
             session.add(UserWeight(user_name=self.current_username, weight=weight, date=weigh_date))
             session.commit()
 
